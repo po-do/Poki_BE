@@ -167,9 +167,7 @@ export class BoardController {
           }
         };
         initialData(); // 맨 처음 보드 상태를 불러옴
-
-        const intervalId = setInterval(updateData, 1000);
-
+        const intervalId = setInterval(updateData, 500);
         // Clean up the interval when the client disconnects
         observer.complete = () => {
           clearInterval(intervalId);
