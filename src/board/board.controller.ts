@@ -100,7 +100,7 @@ export class BoardController {
       @GetUserId() id: number,
       @GetUserType() type: string,
     ): Promise<Observable<responseSseBoardDto>> {
-      EventEmitter.defaultMaxListeners = 10;
+  
       if (type !== 'PARENT') {
         id = await this.AuthService.getConnectedUser(user);
       }
@@ -130,7 +130,8 @@ export class BoardController {
                     },
                 };
                 observer.next(initialResponse);
-                localVersion = globalVersion; // Update the local version
+                localVersion = globalVersion;
+              // Update the local version
                 return;
             }
           // 맨 처음 보드 상태를 불러옴
@@ -143,7 +144,8 @@ export class BoardController {
                 },
             };
             observer.next(initialResponse);
-            localVersion = globalVersion; // Update the local version
+            localVersion = globalVersion;
+           // Update the local version
             };
         console.log(currentUserUpdateTime, Date.now() - 100, '계산')
         console.log(this.userMap, 'usermap')
@@ -184,12 +186,15 @@ export class BoardController {
         };
         initialData(); // 맨 처음 보드 상태를 불러옴
         const intervalId = setInterval(updateData, 500);
+
         // Clean up the interval when the client disconnects
         observer.complete = () => {
           clearInterval(intervalId);
         };
+        localVersion = globalVersion;
         return observer;
       });
+
     }
     
     @Post('/grape/user')
