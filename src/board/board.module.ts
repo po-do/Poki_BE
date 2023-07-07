@@ -40,7 +40,12 @@ const redisConfig = config.get('redis');
     JwtService,
     AuthService,
     JwtStrategy,
-    PushService],
+    PushService,
+    {
+      provide: 'UserMap',
+      useValue: new Map<string, number> ()
+    }
+  ],
   exports: [BoardService, TypeOrmModule]
 })
 export class BoardModule {}
