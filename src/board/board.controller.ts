@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Delete, Patch, ValidationPipe, UsePipes, ParseIntPipe, UseGuards, ForbiddenException, Sse, Inject  } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Delete, Patch, ValidationPipe, UsePipes, ParseIntPipe, UseGuards, ForbiddenException, Sse  } from '@nestjs/common';
 import { Observable, interval } from 'rxjs';
 import { map, retry } from 'rxjs/operators';
 import { AuthGuard } from '@nestjs/passport';
@@ -24,17 +24,12 @@ export class BoardController {
     constructor(
         private boardService: BoardService,
         private AuthService: AuthService,
-        private pushService: PushService,
-        @Inject('UserMap')
-        private userMap: Map<string, number>
-        ) {
-            this.userMap = new Map<string, number>();
-        }
+        private pushService: PushService
+        ) { }
     @Post('grape/create')
     @UsePipes(ValidationPipe)
     async createBoard(
         @GetUserType() type: string,
-        @GetUser() user: User,
         @GetUserId() id: number,
         @GetUserCode() code: string,
     ): Promise <responseBoardDto> {
@@ -57,8 +52,7 @@ export class BoardController {
             },
         };
         
-        this.userMap.set(user.user_id, Date.now());
-        // globalVersion += 1;
+        globalVersion += 1;
 
         return response
 
@@ -68,7 +62,6 @@ export class BoardController {
     async deleteBoard(
         @GetUserType() type: string,
         @GetUserId() userid: number,
-        @GetUser() user: User
     ): Promise<{ code: number; success: boolean }> {
         if (type !== 'PARENT') {
             throw new ForbiddenException('Only parents can update a wishlist.');
@@ -82,9 +75,7 @@ export class BoardController {
 
         //User id를 통해서 board id를 가져온다.
         const board_id = await this.boardService.getBoardByUserId(userid);
-        
-        this.userMap.set(user.user_id, Date.now());
-        // globalVersion += 1;
+        globalVersion += 1;
 
         return await this.boardService.deleteBoard(board_id.id);
     }
@@ -104,16 +95,10 @@ export class BoardController {
       if (type !== 'PARENT') {
         id = await this.AuthService.getConnectedUser(user);
       }
-      let currentUser = user.user_id
-      // let now = Date.now()
-      let currentUserUpdateTime = this.userMap.get(currentUser)
-      console.log(currentUserUpdateTime, 'this is curuserupdatetime')
-
       const use_grape = await this.boardService.getBoardByUserId(id);
       return new Observable<responseSseBoardDto>((observer) => {
         let localVersion = 0; // Local version variable
         const initialData = async () => {
-            this.userMap.set(currentUser, currentUserUpdateTime);
             if (!use_grape) {
                 const initialResponse: responseSseBoardDto = {
                     data: {
@@ -147,12 +132,8 @@ export class BoardController {
             localVersion = globalVersion;
            // Update the local version
             };
-        console.log(currentUserUpdateTime, Date.now() - 100, '계산')
-        console.log(this.userMap, 'usermap')
         const updateData = async () => {
-            console.log(this.userMap.get(user.user_id), Date.now() - 100, '계산')
-          if (Date.now() - this.userMap.get(user.user_id) <  100) {
-            console.log('trigger 발동')
+          if (localVersion < globalVersion) {
             const use_grape = await this.boardService.getBoardByUserId(id);
             if (!use_grape) {
                 const response: responseSseBoardDto = {
@@ -170,6 +151,7 @@ export class BoardController {
                     },
                 };
                 observer.next(response);
+                localVersion = globalVersion; // Update the local version
                 return;
             }
             const response: responseSseBoardDto = {
@@ -181,12 +163,11 @@ export class BoardController {
               },
             };
             observer.next(response);
-            this.userMap.set(user.user_id, Date.now());
+            localVersion = globalVersion; // Update the local version
           }
         };
         initialData(); // 맨 처음 보드 상태를 불러옴
         const intervalId = setInterval(updateData, 500);
-
         // Clean up the interval when the client disconnects
         observer.complete = () => {
           clearInterval(intervalId);
@@ -266,9 +247,8 @@ export class BoardController {
                 grape: await this.boardService.updateBoard(grape.id, CreateBoardDto, id)
             },
         };
-
-        this.userMap.set(user.user_id, Date.now());
-        // globalVersion += 1;
+        
+        globalVersion += 1;
 
         const title = '포도알이 발급되었어요! 지금 확인해보세요.';
 
@@ -318,8 +298,7 @@ export class BoardController {
             },
         };
         
-        this.userMap.set(user.user_id, Date.now());
-        // globalVersion += 1;
+        globalVersion += 1; // Update the global version
         return response
     }
 
